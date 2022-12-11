@@ -83,6 +83,40 @@ def fetch_tweets(url, params):
 def main():
   username = input()
 
+  #total number of tweets being fetched
+  number_of_tweets = 20
+
+  dataset = "../datasets/tweet_list.txt"
+  data_file = open(dataset, 'r')
+
+  sample_tweet = data_file.readline()
+  if sample_tweet == "":
+    sample_tweet = data_file.readline()
+
+  training_tweet_list = []
+  training_word_list = []
+
+  while sample_tweet != "":
+    formatted_tweet = process_tweet(sample_tweet)
+    # print(data)
+
+    if formatted_tweet not in training_tweet_list:
+      #if tweet has not already been added to environment
+      training_tweet_list.append(formatted_tweet)
+      contains_link = False
+      for word in formatted_tweet.split(' '):
+        if 'http' not in word:
+          if (contains_link == False) and (word not in training_word_list): 
+            training_word_list.append(word)
+        else:
+          contains_link = True #if image or link is in the tweet, drop the rest of the link
+      # print(formatted_tweet)
+
+    sample_tweet = data_file.readline()
+    if sample_tweet == "":#allow for a single empty line to appear without breaking input
+      sample_tweet = data_file.readline()
+
+
   #get the user id for tweet request
   user_data = get_user_data(username)
   user_id = user_data['data'][0]['id']
@@ -92,15 +126,14 @@ def main():
 
   query_params = {'tweet.fields' : 'text', 'exclude' : 'retweets,replies', 'max_results' : '10'}
 
-  number_of_tweets = 20
 
   response = fetch_tweets(search_url, query_params)
   
   # print(json.dumps(response, indent=4, sort_keys=True))
-  next_token = response['meta']['next_token']
+  next_token = response['meta']['next_token']#this in an indexing variable so that the request can be repeated to scan through more tweets
   fetched_tweets = 0
   tweet_list = []
-  word_list = []
+  # word_list = []
 
 
   while fetched_tweets < number_of_tweets:
@@ -109,18 +142,18 @@ def main():
     for tweet in response['data']:
       text = tweet['text']
 
-      #don't include tweets with images or links
-      if 'https:' not in text:
-        fetched_tweets = fetched_tweets + 1
-        data = process_tweet(text)
-        # print(data)
+      
+      data = process_tweet(text)
+      # print(data)
 
-        if tweet not in tweet_list:
-          #if tweet has not already been added to environment
-          tweet_list.append(data)
-          for word in data.split(' '):
-            if word not in word_list:
-              word_list.append(word)
+      if tweet not in tweet_list:
+        #if tweet has not already been added to environment
+        tweet_list.append(data)
+        for word in data.split(' '):
+          if word not in training_word_list:
+            if 'http' not in word:#don't include images or links
+              fetched_tweets = fetched_tweets + 1
+              training_word_list.append(word)
 
 
 
@@ -133,8 +166,11 @@ def main():
   #tweets already formatted so they can be directly mapped into input with split(' ')
   #treating punctuation as a 'word' internally currently. We should discuss implications of this
   #formatting means that after result is generated we'll need to remove some of the buffered spaces added between punctuation and words
-  print(word_list)
+  print(training_word_list)
   print(tweet_list)
+
+  print(f'Training set: {len(training_tweet_list)} tweets')
+  print(f'Number of unique words: {len(training_word_list)}')
 
 if __name__ == "__main__":
   main()
