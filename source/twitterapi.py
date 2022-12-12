@@ -38,6 +38,8 @@ def process_tweet(text):
   text = re.sub(r'&lt;', '<', text)
   text = re.sub(r'&gt;', '>', text)
   text = re.sub(r'&amp;', '&', text)
+  
+  text = text.lower()
 
   return(text)
 
@@ -100,6 +102,7 @@ def grab(username, numoftweets):
   fetched_tweets = 0
   tweet_list = []
   word_list = []
+  tweet_list1d = []
 
 
   while fetched_tweets < number_of_tweets:
@@ -132,6 +135,12 @@ def grab(username, numoftweets):
   #tweets already formatted so they can be directly mapped into input with split(' ')
   #treating punctuation as a 'word' internally currently. We should discuss implications of this
   #formatting means that after result is generated we'll need to remove some of the buffered spaces added between punctuation and words
-  print(word_list)
-  print(tweet_list)
-  return word_list
+  # print(word_list)
+  # print(tweet_list)
+  
+  for tweet in tweet_list:
+    temp = tweet.split(' ')
+    tweet_list1d = tweet_list1d + temp
+  print(tweet_list1d) 
+
+  return tweet_list1d
