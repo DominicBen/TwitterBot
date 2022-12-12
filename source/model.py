@@ -60,7 +60,6 @@ class Model(nn.Module):
         output = FF.dropout(FF.tanh(self.linear2(output)), p=self.dropout)
         output = FF.dropout(FF.tanh(self.linear3(output)), p=self.dropout)
 
-
         output = self.linear4(output)
 
         return output, state
@@ -75,17 +74,17 @@ def train(dataset, model, args):
     start_time = time.time()
 
     dataloader = DataLoader(dataset, batch_size=args.batchsize)
+    #criterion
     criterion = nn.CrossEntropyLoss()
-    optimizer = OPT.Adam(model.parameters(), lr=args.lr)
+    #optimizer
+    optimizer = OPT.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr)
 
-    for epoch in range(args.maxepochs):
+    for epoch in range(args.epochs):
         h, c = model.init_state(args.sequencelength)
         for batch, (index, value) in enumerate(dataloader):
             y_pred, (h, c) = model(index, (h, c))
-            #loss = criterion(y_pred.transpose(1, 2), value)
+            loss = criterion(y_pred.transpose(1, 2), value)
 
-            
-            loss = FF.nll_loss(y_pred.transpose(1, 2), value)
             h = h.detach()
             c = c.detach()
 
@@ -95,7 +94,7 @@ def train(dataset, model, args):
             optimizer.step()
 
 
-            print({ 'epoch': epoch, 'batch': batch, 'loss': loss.item() })
+            print({ 'batch': batch, 'epoch': epoch, 'loss': loss.item() })
     
     end_time = time.time()
     print ('the training took: %d(s)' % (end_time - start_time))
@@ -117,16 +116,15 @@ def sample(preds, temperature = 0.8):
 
 
 # Takes in a NN model, and dataset, and generates the next likely word in that data set
-def predict(dataset, model, temperature, text, next_words=100 ):
+def predict(dataset, model, temperature, text, next_words=10 ):
     model.eval()
     words = text.split(' ')
     h, c = model.init_state(len(words))
     for i in range(0, next_words):
-        x = torch.tensor([[dataset.word_to_index[w] for w in words[i:]]])
+        x = torch.tensor([[dataset.wtoi[w] for w in words[i:]]])
         y_pred, (h, c) = model(x, (h, c))
         prediction = y_pred[0][-1]
-        print(prediction)
         predictionsoftmax = FF.softmax(prediction, dim=0).detach().numpy()
         word_index = sample(predictionsoftmax,temperature)
-        words.append(dataset.index_to_word[word_index])
+        words.append(dataset.itow[word_index])
     return words
